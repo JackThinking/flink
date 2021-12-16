@@ -143,6 +143,7 @@ public class StreamGraphGenerator {
 
     public static final String DEFAULT_SLOT_SHARING_GROUP = "default";
 
+    // StreamExecutionEnvironment 的 transformations 列表
     private final List<Transformation<?>> transformations;
 
     private final ExecutionConfig executionConfig;
@@ -152,6 +153,7 @@ public class StreamGraphGenerator {
     private final ReadableConfig configuration;
 
     // Records the slot sharing groups and their corresponding fine-grained ResourceProfile
+    // 中间态保存
     private final Map<String, ResourceProfile> slotSharingGroupResources = new HashMap<>();
 
     private Path savepointDir;
@@ -177,8 +179,8 @@ public class StreamGraphGenerator {
 
     @SuppressWarnings("rawtypes")
     private static final Map<
-                    Class<? extends Transformation>,
-                    TransformationTranslator<?, ? extends Transformation>>
+            Class<? extends Transformation>,
+            TransformationTranslator<?, ? extends Transformation>>
             translatorMap;
 
     static {
@@ -301,6 +303,7 @@ public class StreamGraphGenerator {
         this.savepointRestoreSettings = savepointRestoreSettings;
     }
 
+    // 入口
     public StreamGraph generate() {
         streamGraph = new StreamGraph(executionConfig, checkpointConfig, savepointRestoreSettings);
         streamGraph.setEnableCheckpointsAfterTasksFinish(
@@ -311,6 +314,7 @@ public class StreamGraphGenerator {
 
         alreadyTransformed = new HashMap<>();
 
+        // 遍历所有的transformation
         for (Transformation<?> transformation : transformations) {
             transform(transformation);
         }
@@ -319,6 +323,7 @@ public class StreamGraphGenerator {
 
         setFineGrainedGlobalStreamExchangeMode(streamGraph);
 
+        // DAG 图构建
         for (StreamNode node : streamGraph.getStreamNodes()) {
             if (node.getInEdges().stream().anyMatch(this::shouldDisableUnalignedCheckpointing)) {
                 for (StreamEdge edge : node.getInEdges()) {
@@ -479,7 +484,7 @@ public class StreamGraphGenerator {
                         transformation ->
                                 isUnboundedSource(transformation)
                                         || transformation.getTransitivePredecessors().stream()
-                                                .anyMatch(this::isUnboundedSource));
+                                        .anyMatch(this::isUnboundedSource));
     }
 
     private boolean isUnboundedSource(final Transformation<?> transformation) {
@@ -828,8 +833,9 @@ public class StreamGraphGenerator {
      * <p>Parent transformations will be translated if they are not already translated.
      *
      * @param parentTransformations the transformations whose node ids to return.
+     *
      * @return the nodeIds per transformation or an empty list if the {@code parentTransformations}
-     *     are empty.
+     *         are empty.
      */
     private List<Collection<Integer>> getParentInputIds(
             @Nullable final Collection<Transformation<?>> parentTransformations) {

@@ -2254,9 +2254,10 @@ public class StreamExecutionEnvironment {
      * @return The execution environment of the context in which the program is executed.
      */
     public static StreamExecutionEnvironment getExecutionEnvironment(Configuration configuration) {
-        // 二选一的方式，返回一个本地的StreamExecutionEnvironment
+        // 二选一的方式，多态的体现
         return Utils.resolveFactory(threadLocalContextEnvironmentFactory, contextEnvironmentFactory)
                 .map(factory -> factory.createExecutionEnvironment(configuration))
+                // 默认兜底
                 .orElseGet(() -> StreamExecutionEnvironment.createLocalEnvironment(configuration));
     }
 

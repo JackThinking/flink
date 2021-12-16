@@ -265,7 +265,7 @@ public class StreamGraph implements Pipeline {
      * Set whether to put all vertices into the same slot sharing group by default.
      *
      * @param allVerticesInSameSlotSharingGroupByDefault indicates whether to put all vertices into
-     *     the same slot sharing group by default.
+     *         the same slot sharing group by default.
      */
     public void setAllVerticesInSameSlotSharingGroupByDefault(
             boolean allVerticesInSameSlotSharingGroupByDefault) {
@@ -487,6 +487,7 @@ public class StreamGraph implements Pipeline {
         }
     }
 
+    // 添加节点和边
     protected StreamNode addNode(
             Integer vertexID,
             @Nullable String slotSharingGroup,
@@ -507,7 +508,7 @@ public class StreamGraph implements Pipeline {
                         operatorFactory,
                         operatorName,
                         vertexClass);
-
+        // 创建 StreamNode，这里保存了 StreamOperator 和 vertexClass 信息
         streamNodes.put(vertexID, vertex);
 
         return vertex;
