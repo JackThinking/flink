@@ -550,7 +550,7 @@ public class StreamGraphGenerator {
         final TransformationTranslator<?, Transformation<?>> translator =
                 (TransformationTranslator<?, Transformation<?>>)
                         translatorMap.get(transform.getClass());
-
+        // 使用多态解释器或者兜底解析器
         Collection<Integer> transformedIds;
         if (translator != null) {
             transformedIds = translate(translator, transform);
