@@ -108,6 +108,7 @@ public class StreamingJobGraphGenerator {
 
     // ------------------------------------------------------------------------
 
+    // StreamJob -> JobGraph 的映射
     public static JobGraph createJobGraph(StreamGraph streamGraph) {
         return createJobGraph(streamGraph, null);
     }
