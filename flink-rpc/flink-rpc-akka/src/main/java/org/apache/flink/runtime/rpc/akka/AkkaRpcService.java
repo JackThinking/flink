@@ -273,6 +273,7 @@ public class AkkaRpcService implements RpcService {
             hostname = host.get();
         }
 
+        // 获取所有实现 RpcGateway 的类
         Set<Class<?>> implementedRpcGateways =
                 new HashSet<>(RpcUtils.extractImplementedRpcGateways(rpcEndpoint.getClass()));
 
@@ -281,6 +282,7 @@ public class AkkaRpcService implements RpcService {
 
         final InvocationHandler akkaInvocationHandler;
 
+        // 创建 InvocationHandler
         if (rpcEndpoint instanceof FencedRpcEndpoint) {
             // a FencedRpcEndpoint needs a FencedAkkaInvocationHandler
             akkaInvocationHandler =
@@ -314,6 +316,7 @@ public class AkkaRpcService implements RpcService {
         // code is loaded dynamically (for example from an OSGI bundle) through a custom ClassLoader
         ClassLoader classLoader = getClass().getClassLoader();
 
+        // 通过动态代理创建代理对象
         @SuppressWarnings("unchecked")
         RpcServer server =
                 (RpcServer)
