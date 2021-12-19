@@ -201,7 +201,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
     private final LibraryCacheManager libraryCacheManager;
 
     /** The address to metric query service on this Task Manager. */
-    @Nullable private final String metricQueryServiceAddress;
+    @Nullable
+    private final String metricQueryServiceAddress;
 
     // --------- TaskManager services --------
 
@@ -259,13 +260,17 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
     // --------- resource manager --------
 
-    @Nullable private ResourceManagerAddress resourceManagerAddress;
+    @Nullable
+    private ResourceManagerAddress resourceManagerAddress;
 
-    @Nullable private EstablishedResourceManagerConnection establishedResourceManagerConnection;
+    @Nullable
+    private EstablishedResourceManagerConnection establishedResourceManagerConnection;
 
-    @Nullable private TaskExecutorToResourceManagerConnection resourceManagerConnection;
+    @Nullable
+    private TaskExecutorToResourceManagerConnection resourceManagerConnection;
 
-    @Nullable private UUID currentRegistrationTimeoutId;
+    @Nullable
+    private UUID currentRegistrationTimeoutId;
 
     private Map<JobID, Collection<CompletableFuture<ExecutionState>>>
             taskResultPartitionCleanupFuturesPerJob = new HashMap<>(8);
@@ -340,15 +345,15 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
     }
 
     private HeartbeatManager<Void, TaskExecutorHeartbeatPayload>
-            createResourceManagerHeartbeatManager(
-                    HeartbeatServices heartbeatServices, ResourceID resourceId) {
+    createResourceManagerHeartbeatManager(
+            HeartbeatServices heartbeatServices, ResourceID resourceId) {
         return heartbeatServices.createHeartbeatManager(
                 resourceId, new ResourceManagerHeartbeatListener(), getMainThreadExecutor(), log);
     }
 
     private HeartbeatManager<AllocatedSlotReport, TaskExecutorToJobManagerHeartbeatPayload>
-            createJobManagerHeartbeatManager(
-                    HeartbeatServices heartbeatServices, ResourceID resourceId) {
+    createJobManagerHeartbeatManager(
+            HeartbeatServices heartbeatServices, ResourceID resourceId) {
         return heartbeatServices.createHeartbeatManager(
                 resourceId, new JobManagerHeartbeatListener(), getMainThreadExecutor(), log);
     }
@@ -1066,7 +1071,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                 allocationId,
                 jobId,
                 resourceManagerId);
-
+        // 判断发送请求的 RM 是否是当前 TaskExecutor 注册的
         if (!isConnectedToResourceManager(resourceManagerId)) {
             final String message =
                     String.format(
@@ -1077,6 +1082,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
         }
 
         try {
+            // 如果 slot 是 Free 状态，则分配 slot
             allocateSlot(slotId, jobId, allocationId, resourceProfile);
         } catch (SlotAllocationException sae) {
             return FutureUtils.completedExceptionally(sae);
@@ -1110,6 +1116,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                     new SlotAllocationException("Could not create new job.", e));
         }
 
+        // 提供 slot 给 JobManager
         if (job.isConnected()) {
             offerSlotsToJobManager(jobId);
         }
@@ -1360,6 +1367,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
             InstanceID taskExecutorRegistrationId,
             ClusterInformation clusterInformation) {
 
+        // 首次建立连接，向 RM 报告 slot 信息
         final CompletableFuture<Acknowledge> slotReportResponseFuture =
                 resourceManagerGateway.sendSlotReport(
                         getResourceID(),
@@ -1982,7 +1990,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
      *
      * @param jobMasterGateway jobMasterGateway to talk to the connected job master
      * @param allocatedSlotReport represents the JobMaster's view on the current slot allocation
-     *     state
+     *         state
      */
     private void syncSlotsWithSnapshotFromJobMaster(
             JobMasterGateway jobMasterGateway, AllocatedSlotReport allocatedSlotReport) {
@@ -2251,9 +2259,9 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
     private final class ResourceManagerRegistrationListener
             implements RegistrationConnectionListener<
-                    TaskExecutorToResourceManagerConnection,
-                    TaskExecutorRegistrationSuccess,
-                    TaskExecutorRegistrationRejection> {
+            TaskExecutorToResourceManagerConnection,
+            TaskExecutorRegistrationSuccess,
+            TaskExecutorRegistrationRejection> {
 
         @Override
         public void onRegistrationSuccess(
@@ -2296,7 +2304,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                     new FlinkException(
                             String.format(
                                     "The TaskExecutor's registration at the ResourceManager %s has been rejected: %s",
-                                    targetAddress, rejection)));
+                                    targetAddress,
+                                    rejection)));
         }
     }
 
@@ -2359,7 +2368,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
     private class JobManagerHeartbeatListener
             implements HeartbeatListener<
-                    AllocatedSlotReport, TaskExecutorToJobManagerHeartbeatPayload> {
+            AllocatedSlotReport, TaskExecutorToJobManagerHeartbeatPayload> {
 
         @Override
         public void notifyHeartbeatTimeout(final ResourceID resourceID) {
@@ -2468,8 +2477,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
             // first check whether the timeout is still valid
             if (establishedResourceManagerConnection != null
                     && establishedResourceManagerConnection
-                            .getResourceManagerResourceId()
-                            .equals(resourceId)) {
+                    .getResourceManagerResourceId()
+                    .equals(resourceId)) {
 
                 reconnectToResourceManager(cause);
             }
