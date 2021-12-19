@@ -146,6 +146,7 @@ class AkkaRpcActor<T extends RpcEndpoint & RpcGateway> extends AbstractActor {
         state = state.finishTermination();
     }
 
+    // 不同类型消息的处理方法
     @Override
     public Receive createReceive() {
         return ReceiveBuilder.create()
@@ -155,6 +156,7 @@ class AkkaRpcActor<T extends RpcEndpoint & RpcGateway> extends AbstractActor {
                 .build();
     }
 
+    // 处理 RPC 调用
     private void handleMessage(final Object message) {
         if (state.isRunning()) {
             mainThreadValidator.enterMainThread();
@@ -237,7 +239,8 @@ class AkkaRpcActor<T extends RpcEndpoint & RpcGateway> extends AbstractActor {
                     new AkkaHandshakeException(
                             String.format(
                                     "Version mismatch between source (%s) and target (%s) rpc component. Please verify that all components have the same version.",
-                                    handshakeMessage.getVersion(), getVersion())));
+                                    handshakeMessage.getVersion(),
+                                    getVersion())));
         } else if (!isGatewaySupported(handshakeMessage.getRpcGateway())) {
             sendErrorIfSender(
                     new AkkaHandshakeException(
@@ -370,8 +373,8 @@ class AkkaRpcActor<T extends RpcEndpoint & RpcGateway> extends AbstractActor {
                                 if (isRemoteSender(sender)) {
                                     Either<AkkaRpcSerializedValue, AkkaRpcException>
                                             serializedResult =
-                                                    serializeRemoteResultAndVerifySize(
-                                                            value, methodName);
+                                            serializeRemoteResultAndVerifySize(
+                                                    value, methodName);
 
                                     if (serializedResult.isLeft()) {
                                         promise.success(serializedResult.left());
@@ -482,9 +485,11 @@ class AkkaRpcActor<T extends RpcEndpoint & RpcGateway> extends AbstractActor {
      *
      * @param methodName Name of the method
      * @param parameterTypes Parameter types of the method
+     *
      * @return Method of the rpc endpoint
+     *
      * @throws NoSuchMethodException Thrown if the method with the given name and parameter types
-     *     cannot be found at the rpc endpoint
+     *         cannot be found at the rpc endpoint
      */
     private Method lookupRpcMethod(final String methodName, final Class<?>[] parameterTypes)
             throws NoSuchMethodException {
@@ -506,6 +511,7 @@ class AkkaRpcActor<T extends RpcEndpoint & RpcGateway> extends AbstractActor {
      * Hook to envelope self messages.
      *
      * @param message to envelope
+     *
      * @return enveloped message
      */
     protected Object envelopeSelfMessage(Object message) {
@@ -674,7 +680,8 @@ class AkkaRpcActor<T extends RpcEndpoint & RpcGateway> extends AbstractActor {
         private static final RpcEndpointTerminationResult SUCCESS =
                 new RpcEndpointTerminationResult(null);
 
-        @Nullable private final Throwable failureCause;
+        @Nullable
+        private final Throwable failureCause;
 
         private RpcEndpointTerminationResult(@Nullable Throwable failureCause) {
             this.failureCause = failureCause;

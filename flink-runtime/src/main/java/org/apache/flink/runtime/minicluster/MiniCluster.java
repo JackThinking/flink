@@ -141,7 +141,7 @@ public class MiniCluster implements AutoCloseableAsync {
 
     private final TerminatingFatalErrorHandlerFactory
             taskManagerTerminatingFatalErrorHandlerFactory =
-                    new TerminatingFatalErrorHandlerFactory();
+            new TerminatingFatalErrorHandlerFactory();
 
     private CompletableFuture<Void> terminationFuture;
 
@@ -218,7 +218,7 @@ public class MiniCluster implements AutoCloseableAsync {
                         1
                                 + 2
                                 + miniClusterConfiguration
-                                        .getNumTaskManagers()); // common + JM + RM + TMs
+                                .getNumTaskManagers()); // common + JM + RM + TMs
         this.dispatcherResourceManagerComponents = new ArrayList<>(1);
 
         // There shouldn't be any lost messages between the MiniCluster and the Flink components
@@ -265,7 +265,7 @@ public class MiniCluster implements AutoCloseableAsync {
      * Starts the mini cluster, based on the configured properties.
      *
      * @throws Exception This method passes on any exception that occurs during the startup of the
-     *     mini cluster.
+     *         mini cluster.
      */
     public void start() throws Exception {
         synchronized (lock) {
@@ -345,6 +345,7 @@ public class MiniCluster implements AutoCloseableAsync {
                                     configuration, commonRpcService.getAddress(), rpcSystem);
                 }
 
+                // 启动指标监控服务
                 metricRegistry.startQueryService(metricQueryServiceRpcService, null);
 
                 processMetricGroup =
@@ -358,11 +359,14 @@ public class MiniCluster implements AutoCloseableAsync {
                         Executors.newFixedThreadPool(
                                 ClusterEntrypointUtils.getPoolSize(configuration),
                                 new ExecutorThreadFactory("mini-cluster-io"));
+                // 启动 HA 服务
                 haServices = createHighAvailabilityServices(configuration, ioExecutor);
 
+                // 启动二进制服务
                 blobServer = new BlobServer(configuration, haServices.createBlobStore());
                 blobServer.start();
 
+                // 启动心跳服务
                 heartbeatServices = HeartbeatServices.fromConfiguration(configuration);
 
                 blobCacheService =
@@ -372,12 +376,14 @@ public class MiniCluster implements AutoCloseableAsync {
                                 new InetSocketAddress(
                                         InetAddress.getLocalHost(), blobServer.getPort()));
 
+                // 启动 TaskManager
                 startTaskManagers();
 
                 MetricQueryServiceRetriever metricQueryServiceRetriever =
                         new RpcMetricQueryServiceRetriever(
                                 metricRegistry.getMetricQueryServiceRpcService());
 
+                // 建立 Dispatcher 和 ResourceManager 的连接
                 setupDispatcherResourceManagerComponents(
                         configuration,
                         dispatcherResourceManagerComponentRpcServiceFactory,
@@ -404,6 +410,7 @@ public class MiniCluster implements AutoCloseableAsync {
                                         21, Duration.ofMillis(5L), Duration.ofMillis(20L)));
                 webMonitorLeaderRetriever = new LeaderRetriever();
 
+                // 启动 resourceManagerLeader 、dispatcherLeader、 clusterRestEndpointLeader
                 resourceManagerLeaderRetriever.start(resourceManagerGatewayRetriever);
                 dispatcherLeaderRetriever.start(dispatcherGatewayRetriever);
                 clusterRestEndpointLeaderRetrievalService.start(webMonitorLeaderRetriever);
@@ -462,16 +469,16 @@ public class MiniCluster implements AutoCloseableAsync {
 
     @VisibleForTesting
     protected Collection<? extends DispatcherResourceManagerComponent>
-            createDispatcherResourceManagerComponents(
-                    Configuration configuration,
-                    RpcServiceFactory rpcServiceFactory,
-                    HighAvailabilityServices haServices,
-                    BlobServer blobServer,
-                    HeartbeatServices heartbeatServices,
-                    MetricRegistry metricRegistry,
-                    MetricQueryServiceRetriever metricQueryServiceRetriever,
-                    FatalErrorHandler fatalErrorHandler)
-                    throws Exception {
+    createDispatcherResourceManagerComponents(
+            Configuration configuration,
+            RpcServiceFactory rpcServiceFactory,
+            HighAvailabilityServices haServices,
+            BlobServer blobServer,
+            HeartbeatServices heartbeatServices,
+            MetricRegistry metricRegistry,
+            MetricQueryServiceRetriever metricQueryServiceRetriever,
+            FatalErrorHandler fatalErrorHandler)
+            throws Exception {
         DispatcherResourceManagerComponentFactory dispatcherResourceManagerComponentFactory =
                 createDispatcherResourceManagerComponentFactory();
         return Collections.singleton(
@@ -686,6 +693,7 @@ public class MiniCluster implements AutoCloseableAsync {
      * is not reused if more TaskManagers are started with {@link #startTaskManager()}.
      *
      * @param index index of the TaskManager to terminate
+     *
      * @return {@link CompletableFuture} of the given TaskManager termination
      */
     public CompletableFuture<Void> terminateTaskManager(int index) {
@@ -804,8 +812,9 @@ public class MiniCluster implements AutoCloseableAsync {
      * been added to the
      *
      * @param job The Flink job to execute
+     *
      * @throws JobExecutionException Thrown if anything went amiss during initial job launch, or if
-     *     the job terminally failed.
+     *         the job terminally failed.
      */
     public void runDetached(JobGraph job) throws JobExecutionException, InterruptedException {
         checkNotNull(job, "job is null");
@@ -825,9 +834,11 @@ public class MiniCluster implements AutoCloseableAsync {
      * successfully, or after it failed terminally.
      *
      * @param job The Flink job to execute
+     *
      * @return The result of the job execution
+     *
      * @throws JobExecutionException Thrown if anything went amiss during initial job launch, or if
-     *     the job terminally failed.
+     *         the job terminally failed.
      */
     public JobExecutionResult executeJobBlocking(JobGraph job)
             throws JobExecutionException, InterruptedException {
@@ -952,6 +963,7 @@ public class MiniCluster implements AutoCloseableAsync {
      * @param bindAddress The address to bind the RPC service to.
      * @param bindPort The port range to bind the RPC service to.
      * @param rpcSystem
+     *
      * @return The instantiated RPC service
      */
     protected RpcService createRemoteRpcService(
@@ -973,6 +985,7 @@ public class MiniCluster implements AutoCloseableAsync {
      * @param externalPortRange The external port range to access the RPC service.
      * @param bindAddress The address to bind the RPC service to.
      * @param rpcSystem
+     *
      * @return The instantiated RPC service
      */
     protected RpcService createRemoteRpcService(
@@ -994,6 +1007,7 @@ public class MiniCluster implements AutoCloseableAsync {
      *
      * @param configuration Flink configuration.
      * @param rpcSystem
+     *
      * @return The instantiated RPC service
      */
     protected RpcService createLocalRpcService(Configuration configuration, RpcSystem rpcSystem)
@@ -1250,7 +1264,8 @@ public class MiniCluster implements AutoCloseableAsync {
          * given index.
          *
          * @param index into the {@link #taskManagers} collection to identify the correct {@link
-         *     TaskExecutor}.
+         *         TaskExecutor}.
+         *
          * @return {@link TerminatingFatalErrorHandler} for the given index
          */
         @GuardedBy("lock")
