@@ -1318,7 +1318,6 @@ public class Task
             final long checkpointTimestamp,
             final CheckpointOptions checkpointOptions) {
 
-        // 只有作为 source 的 Task 才会触发
         final TaskInvokable invokable = this.invokable;
         final CheckpointMetaData checkpointMetaData =
                 new CheckpointMetaData(
