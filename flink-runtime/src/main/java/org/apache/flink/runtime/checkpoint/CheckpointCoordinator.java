@@ -1089,6 +1089,7 @@ public class CheckpointCoordinator {
                 return false;
             }
 
+            // 一个处于中间状态的 checkpoint
             final PendingCheckpoint checkpoint = pendingCheckpoints.get(checkpointId);
 
             if (message.getSubtaskState() != null) {

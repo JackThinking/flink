@@ -114,7 +114,7 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
                 handleAnyFailure(
                         cause == null
                                 ? new FlinkException(
-                                        "Unknown failure cause. Probably related to FLINK-21376.")
+                                "Unknown failure cause. Probably related to FLINK-21376.")
                                 : cause);
             }
         }
@@ -179,6 +179,7 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
 
         schedulingProvider.stopCheckpointScheduler();
 
+        // savepoint 和 checkpoint 的处理逻辑基本一致，只是 savepoint 是强制触发
         final CompletableFuture<String> savepointFuture =
                 executionGraph
                         .getCheckpointCoordinator()
@@ -201,7 +202,7 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
          * @param executionGraph executionGraph to pass to the {@link Canceling} state
          * @param executionGraphHandler executionGraphHandler to pass to the {@link Canceling} state
          * @param operatorCoordinatorHandler operatorCoordinatorHandler to pass to the {@link
-         *     Canceling} state
+         *         Canceling} state
          */
         void goToCanceling(
                 ExecutionGraph executionGraph,
@@ -212,6 +213,7 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
          * Asks how to handle the failure.
          *
          * @param failure failure describing the failure cause
+         *
          * @return {@link FailureResult} which describes how to handle the failure
          */
         FailureResult howToHandleFailure(Throwable failure);
@@ -220,6 +222,7 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
          * Asks if we can scale up the currently executing job.
          *
          * @param executionGraph executionGraph for making the scaling decision.
+         *
          * @return true, if we can scale up
          */
         boolean canScaleUp(ExecutionGraph executionGraph);
@@ -229,11 +232,11 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
          *
          * @param executionGraph executionGraph to pass to the {@link Restarting} state
          * @param executionGraphHandler executionGraphHandler to pass to the {@link Restarting}
-         *     state
+         *         state
          * @param operatorCoordinatorHandler operatorCoordinatorHandler to pas to the {@link
-         *     Restarting} state
+         *         Restarting} state
          * @param backoffTime backoffTime to wait before transitioning to the {@link Restarting}
-         *     state
+         *         state
          */
         void goToRestarting(
                 ExecutionGraph executionGraph,
@@ -247,7 +250,7 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
          * @param executionGraph executionGraph to pass to the {@link Failing} state
          * @param executionGraphHandler executionGraphHandler to pass to the {@link Failing} state
          * @param operatorCoordinatorHandler operatorCoordinatorHandler to pass to the {@link
-         *     Failing} state
+         *         Failing} state
          * @param failureCause failureCause describing why the job execution failed
          */
         void goToFailing(
@@ -261,10 +264,11 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
          *
          * @param executionGraph executionGraph to pass to the {@link StopWithSavepoint} state
          * @param executionGraphHandler executionGraphHandler to pass to the {@link
-         *     StopWithSavepoint} state
+         *         StopWithSavepoint} state
          * @param operatorCoordinatorHandler operatorCoordinatorHandler to pass to the {@link
-         *     StopWithSavepoint} state
+         *         StopWithSavepoint} state
          * @param savepointFuture Future for the savepoint to complete.
+         *
          * @return Location of the savepoint.
          */
         CompletableFuture<String> goToStopWithSavepoint(
@@ -278,9 +282,10 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
          * Runs the given action after a delay if the state at this time equals the expected state.
          *
          * @param expectedState expectedState describes the required state at the time of running
-         *     the action
+         *         the action
          * @param action action to run if the expected state equals the actual state
          * @param delay delay after which to run the action
+         *
          * @return a ScheduledFuture representing pending completion of the task
          */
         ScheduledFuture<?> runIfState(State expectedState, Runnable action, Duration delay);
@@ -291,7 +296,8 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
      * alternatives: Either restarting the job or failing it.
      */
     static final class FailureResult {
-        @Nullable private final Duration backoffTime;
+        @Nullable
+        private final Duration backoffTime;
 
         private final Throwable failureCause;
 
@@ -319,6 +325,7 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
          *
          * @param failureCause failureCause for restarting the job
          * @param backoffTime backoffTime to wait before restarting the job
+         *
          * @return FailureResult which allows to restart the job
          */
         static FailureResult canRestart(Throwable failureCause, Duration backoffTime) {
@@ -329,6 +336,7 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
          * Creates FailureResult which does not allow to restart the job.
          *
          * @param failureCause failureCause describes the reason why the job cannot be restarted
+         *
          * @return FailureResult which does not allow to restart the job
          */
         static FailureResult canNotRestart(Throwable failureCause) {
