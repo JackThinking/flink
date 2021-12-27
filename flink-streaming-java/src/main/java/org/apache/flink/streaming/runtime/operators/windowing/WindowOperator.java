@@ -208,6 +208,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 
     @Override
     public void open() throws Exception {
+        // 会进行一些初始化操作
         super.open();
 
         this.numLateRecordsDropped = metrics.counter(LATE_ELEMENTS_DROPPED_METRIC_NAME);
@@ -255,7 +256,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 
             final TupleSerializer<Tuple2<W, W>> tupleSerializer =
                     new TupleSerializer<>(
-                            typedTuple, new TypeSerializer[] {windowSerializer, windowSerializer});
+                            typedTuple, new TypeSerializer[]{windowSerializer, windowSerializer});
 
             final ListStateDescriptor<Tuple2<W, W>> mergingSetsStateDescriptor =
                     new ListStateDescriptor<>("merging-window-set", tupleSerializer);
@@ -311,14 +312,14 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 
                                         if ((windowAssigner.isEventTime()
                                                 && mergeResult.maxTimestamp() + allowedLateness
-                                                        <= internalTimerService
-                                                                .currentWatermark())) {
+                                                <= internalTimerService
+                                                .currentWatermark())) {
                                             throw new UnsupportedOperationException(
                                                     "The end timestamp of an "
                                                             + "event-time window cannot become earlier than the current watermark "
                                                             + "by merging. Current watermark: "
                                                             + internalTimerService
-                                                                    .currentWatermark()
+                                                            .currentWatermark()
                                                             + " window: "
                                                             + mergeResult);
                                         } else if (!windowAssigner.isEventTime()) {
@@ -596,12 +597,13 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
      * Decide if a record is currently late, based on current watermark and allowed lateness.
      *
      * @param element The element to check
+     *
      * @return The element for which should be considered when sideoutputs
      */
     protected boolean isElementLate(StreamRecord<IN> element) {
         return (windowAssigner.isEventTime())
                 && (element.getTimestamp() + allowedLateness
-                        <= internalTimerService.currentWatermark());
+                <= internalTimerService.currentWatermark());
     }
 
     /**
@@ -754,7 +756,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
             this.windowState =
                     windowAssigner instanceof MergingWindowAssigner
                             ? new MergingWindowStateStore(
-                                    getKeyedStateBackend(), getExecutionConfig())
+                            getKeyedStateBackend(), getExecutionConfig())
                             : new PerWindowStateStore(getKeyedStateBackend(), getExecutionConfig());
         }
 
