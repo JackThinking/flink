@@ -271,7 +271,8 @@ public class Task
      * The invokable of this task, if initialized. All accesses must copy the reference and check
      * for null, as this field is cleared as part of the disposal logic.
      */
-    @Nullable private volatile TaskInvokable invokable;
+    @Nullable
+    private volatile TaskInvokable invokable;
 
     /** The current execution state of the task. */
     private volatile ExecutionState executionState = ExecutionState.CREATED;
@@ -397,7 +398,7 @@ public class Task
                 shuffleEnvironment
                         .createResultPartitionWriters(
                                 taskShuffleContext, resultPartitionDeploymentDescriptors)
-                        .toArray(new ResultPartitionWriter[] {});
+                        .toArray(new ResultPartitionWriter[]{});
 
         this.consumableNotifyingPartitionWriters =
                 ConsumableNotifyingResultPartitionWriterDecorator.decorate(
@@ -506,7 +507,7 @@ public class Task
         if (invokable == null
                 || consumableNotifyingPartitionWriters.length == 0
                 || (executionState != ExecutionState.INITIALIZING
-                        && executionState != ExecutionState.RUNNING)) {
+                && executionState != ExecutionState.RUNNING)) {
             return false;
         }
         for (int i = 0; i < consumableNotifyingPartitionWriters.length; ++i) {
@@ -882,7 +883,7 @@ public class Task
         // check if the exception is unrecoverable
         if (ExceptionUtils.isJvmFatalError(t)
                 || (t instanceof OutOfMemoryError
-                        && taskManagerConfig.shouldExitJvmOnOutOfMemoryError())) {
+                && taskManagerConfig.shouldExitJvmOnOutOfMemoryError())) {
 
             // terminate the JVM immediately
             // don't attempt a clean shutdown, because we cannot expect the clean shutdown
@@ -1059,6 +1060,7 @@ public class Task
      *
      * @param currentState of the execution
      * @param newState of the execution
+     *
      * @return true if the transition was successful, otherwise false
      */
     private boolean transitionState(ExecutionState currentState, ExecutionState newState) {
@@ -1071,6 +1073,7 @@ public class Task
      * @param currentState of the execution
      * @param newState of the execution
      * @param cause of the transition change or null
+     *
      * @return true if the transition was successful, otherwise false
      */
     private boolean transitionState(
@@ -1482,7 +1485,7 @@ public class Task
      * takes care of that).
      *
      * @throws FlinkException This method throws exceptions indicating the reason why delivery did
-     *     not succeed.
+     *         not succeed.
      */
     public void deliverOperatorEvent(OperatorID operator, SerializedValue<OperatorEvent> evt)
             throws FlinkException {
@@ -1491,7 +1494,7 @@ public class Task
 
         if (invokable == null
                 || (currentState != ExecutionState.RUNNING
-                        && currentState != ExecutionState.INITIALIZING)) {
+                && currentState != ExecutionState.INITIALIZING)) {
             throw new TaskNotRunningException("Task is not running, but in state " + currentState);
         }
 
@@ -1573,9 +1576,11 @@ public class Task
      * @param classLoader The classloader to load the class through.
      * @param className The name of the class to load.
      * @param environment The task environment.
+     *
      * @return The instantiated invokable task object.
+     *
      * @throws Throwable Forwards all exceptions that happen during initialization of the task. Also
-     *     throws an exception if the task class misses the necessary constructor.
+     *         throws an exception if the task class misses the necessary constructor.
      */
     private static TaskInvokable loadAndInstantiateInvokable(
             ClassLoader classLoader, String className, Environment environment) throws Throwable {

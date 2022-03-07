@@ -42,7 +42,6 @@ import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CheckpointStorageCoordinatorView;
 import org.apache.flink.runtime.state.CheckpointStorageLocation;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
-import org.apache.flink.runtime.state.SharedStateRegistry;
 import org.apache.flink.runtime.state.memory.ByteStreamStateHandle;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkRuntimeException;
@@ -219,6 +218,7 @@ public class CheckpointCoordinator {
     private final ExecutionAttemptMappingProvider attemptMappingProvider;
 
     private boolean baseLocationsForCheckpointInitialized = false;
+    private boolean forceFullSnapshot;
 
     // --------------------------------------------------------------------------------------------
 
@@ -685,9 +685,16 @@ public class CheckpointCoordinator {
         // no exception, no discarding, everything is OK
         final long checkpointId = checkpoint.getCheckpointID();
 
+        final CheckpointType type;
+        if (this.forceFullSnapshot && !request.props.isSavepoint()) {
+            type = CheckpointType.FULL_CHECKPOINT;
+        } else {
+            type = request.props.getCheckpointType();
+        }
+
         final CheckpointOptions checkpointOptions =
                 CheckpointOptions.forConfig(
-                        request.props.getCheckpointType(),
+                        type,
                         checkpoint.getCheckpointStorageLocation().getLocationReference(),
                         isExactlyOnceMode,
                         unalignedCheckpointsEnabled,
@@ -1082,7 +1089,23 @@ public class CheckpointCoordinator {
                 return false;
             }
 
+            // 一个处于中间状态的 checkpoint
             final PendingCheckpoint checkpoint = pendingCheckpoints.get(checkpointId);
+
+            if (message.getSubtaskState() != null) {
+                // Register shared state regardless of checkpoint state and task ACK state.
+                // This way, shared state is
+                // 1. kept if the message is late or state will be used by the task otherwise
+                // 2. removed eventually upon checkpoint subsumption (or job cancellation)
+                // Do not register savepoints' shared state, as Flink is not in charge of
+                // savepoints' lifecycle
+                if (checkpoint == null || !checkpoint.getProps().isSavepoint()) {
+                    message.getSubtaskState()
+                            .registerSharedStates(
+                                    completedCheckpointStore.getSharedStateRegistry(),
+                                    checkpointId);
+                }
+            }
 
             if (checkpoint != null && !checkpoint.isDisposed()) {
 
@@ -1205,12 +1228,7 @@ public class CheckpointCoordinator {
         final CompletedCheckpoint lastSubsumed;
         final CheckpointProperties props = pendingCheckpoint.getProps();
 
-        // As a first step to complete the checkpoint, we register its state with the registry
-        // we do not register savepoints' shared state, as Flink is not in charge of savepoints'
-        // lifecycle
-        if (!props.isSavepoint()) {
-            registerSharedStates(pendingCheckpoint);
-        }
+        completedCheckpointStore.getSharedStateRegistry().checkpointCompleted(checkpointId);
 
         try {
             completedCheckpoint = finalizeCheckpoint(pendingCheckpoint);
@@ -1252,12 +1270,6 @@ public class CheckpointCoordinator {
                     completedCheckpoint.getTimestamp(),
                     extractIdIfDiscardedOnSubsumed(lastSubsumed));
         }
-    }
-
-    private void registerSharedStates(PendingCheckpoint pendingCheckpoint) {
-        Map<OperatorID, OperatorState> operatorStates = pendingCheckpoint.getOperatorStates();
-        SharedStateRegistry sharedStateRegistry = completedCheckpointStore.getSharedStateRegistry();
-        sharedStateRegistry.registerAll(operatorStates.values());
     }
 
     private void logCheckpointInfo(CompletedCheckpoint completedCheckpoint) {
@@ -1330,8 +1342,13 @@ public class CheckpointCoordinator {
             List<ExecutionVertex> tasksToAbort)
             throws CheckpointException {
         try {
-            return completedCheckpointStore.addCheckpointAndSubsumeOldestOne(
-                    completedCheckpoint, checkpointsCleaner, this::scheduleTriggerRequest);
+            final CompletedCheckpoint subsumedCheckpoint =
+                    completedCheckpointStore.addCheckpointAndSubsumeOldestOne(
+                            completedCheckpoint, checkpointsCleaner, this::scheduleTriggerRequest);
+            // reset the force full snapshot flag, we should've completed at least one full
+            // snapshot by now
+            this.forceFullSnapshot = false;
+            return subsumedCheckpoint;
         } catch (Exception exception) {
             if (exception instanceof PossibleInconsistentStateException) {
                 LOG.warn(
@@ -1588,6 +1605,8 @@ public class CheckpointCoordinator {
 
             LOG.info("Restoring job {} from {}.", job, latest);
 
+            this.forceFullSnapshot = latest.getProperties().isUnclaimed();
+
             // re-assign the task states
             final Map<OperatorID, OperatorState> operatorStates = extractOperatorStates(latest);
 
@@ -1691,6 +1710,9 @@ public class CheckpointCoordinator {
                 break;
             case LEGACY:
                 checkpointProperties = CheckpointProperties.forSavepoint(false);
+                break;
+            case NO_CLAIM:
+                checkpointProperties = CheckpointProperties.forUnclaimedSnapshot();
                 break;
             default:
                 throw new IllegalArgumentException("Unknown snapshot restore mode");
