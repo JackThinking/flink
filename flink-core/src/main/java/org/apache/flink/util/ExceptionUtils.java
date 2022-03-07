@@ -461,6 +461,7 @@ public final class ExceptionUtils {
 
     /**
      * Checks whether a throwable chain contains a specific type of exception and returns it.
+     * 优雅的异常处理
      *
      * @param throwable the throwable chain to check.
      * @param searchType the type of exception to search for in the chain.
